@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PocketFinance Mobile</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Touch Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400,500,600,700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        purple: {
+                            900: '#2E1A47',
+                            800: '#3F2361',
+                            700: '#522F7B',
+                            600: '#693DA1',
+                            950: '#1D102E'
+                        },
+                        yellow: {
+                            custom: '#FFD700',
+                            hover: '#E5C100'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar hiding for smooth horizontal swipe */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-purple-950 text-white font-sans antialiased min-h-screen flex flex-col justify-between selection:bg-yellow-custom selection:text-purple-950">
+
+    <!-- Header / Month Navigator (Swipeable feel) -->
+    <header class="bg-purple-900 border-b border-purple-800 sticky top-0 z-30 shadow-lg">
+        <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+            <div>
+                <span class="text-xs text-purple-300 uppercase tracking-wider font-semibold">Controle Financeiro</span>
+                <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-yellow-custom"></i> PocketFinance
+                </h1>
+            </div>
+            <button onclick="openModal()" class="bg-yellow-custom text-purple-950 font-extrabold px-4 py-2.5 rounded-2xl shadow-md hover:bg-yellow-hover active:scale-95 transition flex items-center gap-2 text-sm">
+                <i class="fa-solid fa-plus text-base"></i> Novo Gasto
+            </button>
+        </div>
+
+        <!-- Month Navigation Bar (Arrastar / Swipe Horizontal) -->
+        <div class="max-w-md mx-auto px-4 py-2">
+            <div id="monthScroll" class="flex items-center gap-3 overflow-x-auto no-scrollbar scroll-smooth py-1">
+                <!-- Javascript will inject months dynamically here -->
+            </div>
+        </div>
+    </header>
+
+    <!-- Main App Content -->
+    <main class="max-w-md w-full mx-auto p-4 flex-1 flex flex-col gap-5 pb-24">
+        
+        <!-- Summary Cards (Big UI) -->
+        <section class="grid grid-cols-2 gap-3">
+            <!-- Receitas / Entradas -->
+            <div class="bg-purple-900/80 border border-purple-700/50 p-4 rounded-3xl shadow-md flex flex-col justify-between">
+                <div class="flex items-center justify-between text-emerald-400 mb-1">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-purple-300">Entradas</span>
+                    <i class="fa-solid fa-arrow-trend-up"></i>
+                </div>
+                <div id="totalIncome" class="text-xl font-extrabold tracking-tight text-emerald-400">R$ 0,00</div>
+            </div>
+
+            <!-- Despesas / Saídas -->
+            <div class="bg-purple-900/80 border border-purple-700/50 p-4 rounded-3xl shadow-md flex flex-col justify-between">
+                <div class="flex items-center justify-between text-rose-400 mb-1">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-purple-300">Saídas</span>
+                    <i class="fa-solid fa-arrow-trend-down"></i>
+                </div>
+                <div id="totalExpense" class="text-xl font-extrabold tracking-tight text-rose-400">R$ 0,00</div>
+            </div>
+        </section>
+
+        <!-- Saldo Atual do Mês Selecionado -->
+        <section class="bg-gradient-to-br from-purple-800 to-purple-900 border border-purple-700 p-5 rounded-3xl shadow-xl flex flex-col items-center justify-center text-center">
+            <span class="text-xs font-semibold uppercase tracking-wider text-purple-300 mb-1">Saldo Líquido do Mês</span>
+            <div id="netBalance" class="text-3xl font-black tracking-tight text-white">R$ 0,00</div>
+            <span id="balanceSubtitle" class="text-xs text-purple-300 mt-1">Tudo equilibrado!</span>
+        </section>
+
+        <!-- Transactions Section -->
+        <section class="flex-1 flex flex-col">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="font-bold text-base text-white flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left text-yellow-custom"></i> Histórico do Mês
+                </h2>
+                <span id="txCount" class="text-xs bg-purple-900 border border-purple-700 text-purple-300 px-2.5 py-1 rounded-full font-medium">0 lançamentos</span>
+            </div>
+
+            <!-- List Container -->
+            <div id="txList" class="flex flex-col gap-3">
+                <!-- JavaScript populated list -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Floating Quick Add Button (Big UI for Mobile) -->
+    <div class="fixed bottom-6 right-6 z-40 md:hidden">
+        <button onclick="openModal()" class="w-16 h-16 bg-yellow-custom text-purple-950 rounded-full shadow-2xl flex items-center justify-center text-2xl font-bold hover:scale-105 active:scale-95 transition border-2 border-purple-900">
+            <i class="fa-solid fa-plus"></i>
+        </button>
+    </div>
+
+    <!-- Modal Form (Big UI & Dynamic Categories) -->
+    <div id="transactionModal" class="fixed inset-0 bg-purple-950/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden transition-opacity duration-300">
+        <div class="bg-purple-900 border-t sm:border border-purple-700 w-full max-w-md rounded-t-[2.5rem] sm:rounded-3xl p-6 shadow-2xl flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
+            
+            <div class="flex items-center justify-between border-b border-purple-800 pb-3">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-circle-plus text-yellow-custom"></i> Novo Lançamento
+                </h3>
+                <button onclick="closeModal()" class="w-9 h-9 bg-purple-800 text-purple-300 hover:text-white rounded-full flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="txForm" onsubmit="handleFormSubmit(event)" class="flex flex-col gap-4">
+                
+                <!-- Tipo de Transação (Receita ou Despesa) -->
+                <div class="grid grid-cols-2 gap-3">
+                    <button type="button" id="typeExpenseBtn" onclick="setTxType('expense')" class="py-3 px-4 rounded-2xl font-bold text-sm bg-rose-600 text-white shadow transition flex items-center justify-center gap-2 border border-rose-500">
+                        <i class="fa-solid fa-arrow-down"></i> Despesa
+                    </button>
+                    <button type="button" id="typeIncomeBtn" onclick="setTxType('income')" class="py-3 px-4 rounded-2xl font-bold text-sm bg-purple-800 text-purple-300 transition flex items-center justify-center gap-2 border border-purple-700">
+                        <i class="fa-solid fa-arrow-up"></i> Receita
+                    </button>
+                </div>
+
+                <!-- Campo Valor (Big Input) -->
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-xs font-semibold text-purple-300 uppercase tracking-wider">Valor (R$)</label>
+                    <div class="relative flex items-center">
+                        <span class="absolute left-4 text-purple-400 font-bold text-lg">R$</span>
+                        <input type="number" step="0.01" id="txAmount" required placeholder="0,00" class="w-full bg-purple-950/70 border-2 border-purple-700 rounded-2xl py-3.5 pl-12 pr-4 text-white text-xl font-bold focus:outline-none focus:border-yellow-custom transition placeholder:text-purple-600">
+                    </div>
+                </div>
+
+                <!-- Campo Descrição -->
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-xs font-semibold text-purple-300 uppercase tracking-wider">Descrição</label>
+                    <input type="text" id="txDescription" required placeholder="Ex: Supermercado, Salário, Uber..." class="w-full bg-purple-950/70 border-2 border-purple-700 rounded-2xl py-3.5 px-4 text-white font-medium focus:outline-none focus:border-yellow-custom transition placeholder:text-purple-600">
+                </div>
+
+                <!-- Campo Categoria Dinâmica com Datalist -->
+                <div class="flex flex-col gap-1.5">
+                    <label class="text-xs font-semibold text-purple-300 uppercase tracking-wider">Categoria (Digite ou Selecione)</label>
+                    <div class="relative">
+                        <input type="text" id="txCategory" list="categoriesList" required placeholder="Ex: Alimentação, Lazer, Moradia..." class="w-full bg-purple-950/70 border-2 border-purple-700 rounded-2xl py-3.5 px-4 text-white font-medium focus:outline-none focus:border-yellow-custom transition placeholder:text-purple-600">
+                        <datalist id="categoriesList">
+                            <!-- Dynamic category options injected here -->
+                        </datalist>
+                    </div>
+                    <span class="text-[11px] text-purple-400 pl-1"><i class="fa-solid fa-circle-info"></i> Nova categoria digitada será salva automaticamente.</span>
+                </div>
+
+                <!-- Botão Amarelo de Confirmação (Big UI) -->
+                <button type="submit" class="w-full mt-2 bg-yellow-custom hover:bg-yellow-hover text-purple-950 font-black py-4 px-6 rounded-2xl shadow-lg transition active:scale-98 flex items-center justify-center gap-2 text-base">
+                    <i class="fa-solid fa-check text-lg"></i> Confirmar Lançamento
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Core -->
+    <script>
+        // State Management
+        let appState = {
+            transactions: JSON.parse(localStorage.getItem('pocket_finance_txs')) || [],
+            categories: JSON.parse(localStorage.getItem('pocket_finance_cats')) || ['Alimentação', 'Moradia', 'Transporte', 'Lazer', 'Salário', 'Outros'],
+            currentMonth: formatMonthKey(new Date()), // YYYY-MM
+            currentType: 'expense' // 'expense' or 'income'
+        };
+
+        // Helper: Format Date to YYYY-MM
+        function formatMonthKey(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            return `${year}-${month}`;
+        }
+
+        // Helper: Format Month Label (ex: "Outubro 2026")
+        function formatMonthDisplay(monthKey) {
+            const [year, month] = monthKey.split('-');
+            const date = new Date(year, month - 1, 1);
+            const name = date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+            return name.charAt(0).toUpperCase() + name.slice(1);
+        }
+
+        // Save to LocalStorage
+        function saveData() {
+            localStorage.setItem('pocket_finance_txs', JSON.stringify(appState.transactions));
+            localStorage.setItem('pocket_finance_cats', JSON.stringify(appState.categories));
+        }
+
+        // Render Month Navigation (Horizontal Swipe Bar)
+        function renderMonthNavigator() {
+            const container = document.getElementById('monthScroll');
+            container.innerHTML = '';
+
+            // Generate past 6 months and next 2 months
+            const monthsSet = new Set([appState.currentMonth]);
+            
+            // Add existing transactions months
+            appState.transactions.forEach(t => {
+                if(t.date) monthsSet.add(t.date.substring(0, 7));
+            });
+
+            // Add current + surrounding months
+            const now = new Date();
+            for (let i = -5; i <= 2; i++) {
+                const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+                monthsSet.add(formatMonthKey(d));
+            }
+
+            const sortedMonths = Array.from(monthsSet).sort();
+
+            sortedMonths.forEach(mKey => {
+                const isSelected = mKey === appState.currentMonth;
+                const btn = document.createElement('button');
+                btn.className = `px-4 py-2.5 rounded-2xl font-bold text-xs uppercase tracking-wider whitespace-nowrap transition flex-shrink-0 flex items-center gap-2 ${
+                    isSelected 
+                        ? 'bg-yellow-custom text-purple-950 shadow-md scale-105' 
+                        : 'bg-purple-900/80 text-purple-300 border border-purple-700/50 hover:bg-purple-800'
+                }`;
+                btn.innerHTML = `<i class="fa-solid fa-calendar-days"></i> ${formatMonthDisplay(mKey)}`;
+                btn.onclick = () => {
+                    appState.currentMonth = mKey;
+                    renderAll();
+                };
+                container.appendChild(btn);
+            });
+
+            // Scroll active month into view smoothly
+            setTimeout(() => {
+                const activeBtn = container.querySelector('.bg-yellow-custom');
+                if(activeBtn) {
+                    activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }
+            }, 100);
+        }
+
+        // Render Dashboard Summaries & Transactions List
+        function renderDashboard() {
+            const monthTxs = appState.transactions.filter(t => t.date && t.date.startsWith(appState.currentMonth));
+
+            let totalIncome = 0;
+            let totalExpense = 0;
+
+            monthTxs.forEach(t => {
+                const val = parseFloat(t.amount);
+                if (t.type === 'income') totalIncome += val;
+                else totalExpense += val;
+            });
+
+            const net = totalIncome - totalExpense;
+
+            // Update DOM
+            document.getElementById('totalIncome').innerText = formatCurrency(totalIncome);
+            document.getElementById('totalExpense').innerText = formatCurrency(totalExpense);
+            
+            const netEl = document.getElementById('netBalance');
+            netEl.innerText = formatCurrency(net);
+            netEl.className = `text-3xl font-black tracking-tight ${net >= 0 ? 'text-white' : 'text-rose-400'}`;
+
+            document.getElementById('txCount').innerText = `${monthTxs.length} lançamento${monthTxs.length === 1 ? '' : 's'}`;
+
+            // Render Transactions List
+            const listEl = document.getElementById('txList');
+            listEl.innerHTML = '';
+
+            if (monthTxs.length === 0) {
+                listEl.innerHTML = `
+                    <div class="bg-purple-900/40 border border-purple-800/60 rounded-3xl p-8 text-center flex flex-col items-center justify-center gap-2">
+                        <i class="fa-solid fa-receipt text-3xl text-purple-600 mb-1"></i>
+                        <p class="text-sm font-semibold text-purple-300">Nenhum lançamento neste mês</p>
+                        <p class="text-xs text-purple-500">Toque em "Novo Gasto" para registrar suas finanças.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Sort newest first
+            monthTxs.sort((a, b) => new Date(b.fullDate) - new Date(a.fullDate));
+
+            monthTxs.forEach(t => {
+                const isIncome = t.type === 'income';
+                const item = document.createElement('div');
+                item.className = 'bg-purple-900/70 border border-purple-800/80 p-4 rounded-2xl shadow-sm flex items-center justify-between gap-3 hover:border-purple-600 transition';
+                
+                const dayStr = t.fullDate ? t.fullDate.split('-').reverse().slice(0, 2).join('/') : '';
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-3.5 overflow-hidden">
+                        <div class="w-12 h-12 rounded-2xl flex-shrink-0 flex items-center justify-center text-lg ${isIncome ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}">
+                            <i class="fa-solid ${isIncome ? 'fa-arrow-down' : 'fa-arrow-up'}"></i>
+                        </div>
+                        <div class="flex flex-col truncate">
+                            <span class="font-bold text-white text-sm truncate">${escapeHtml(t.description)}</span>
+                            <div class="flex items-center gap-2 text-xs text-purple-300">
+                                <span class="bg-purple-800/80 px-2 py-0.5 rounded-md font-medium text-purple-200">${escapeHtml(t.category)}</span>
+                                <span>• ${dayStr}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 flex-shrink-0">
+                        <span class="font-extrabold text-sm ${isIncome ? 'text-emerald-400' : 'text-white'}">
+                            ${isIncome ? '+' : '-'} ${formatCurrency(t.amount)}
+                        </span>
+                        <button onclick="deleteTransaction('${t.id}')" class="text-purple-500 hover:text-rose-400 p-2 transition" title="Excluir">
+                            <i class="fa-solid fa-trash-can text-sm"></i>
+                        </button>
+                    </div>
+                `;
+                listEl.appendChild(item);
+            });
+        }
+
+        // Render Category Datalist Options
+        function renderCategories() {
+            const datalist = document.getElementById('categoriesList');
+            datalist.innerHTML = '';
+            appState.categories.sort().forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                datalist.appendChild(option);
+            });
+        }
+
+        // Render Everything
+        function renderAll() {
+            renderMonthNavigator();
+            renderDashboard();
+            renderCategories();
+        }
+
+        // Modal Actions
+        function openModal() {
+            const modal = document.getElementById('transactionModal');
+            modal.classList.remove('hidden');
+            document.getElementById('txAmount').focus();
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('transactionModal');
+            modal.classList.add('hidden');
+            document.getElementById('txForm').reset();
+            setTxType('expense');
+        }
+
+        function setTxType(type) {
+            appState.currentType = type;
+            const expBtn = document.getElementById('typeExpenseBtn');
+            const incBtn = document.getElementById('typeIncomeBtn');
+
+            if (type === 'expense') {
+                expBtn.className = 'py-3 px-4 rounded-2xl font-bold text-sm bg-rose-600 text-white shadow transition flex items-center justify-center gap-2 border border-rose-500';
+                incBtn.className = 'py-3 px-4 rounded-2xl font-bold text-sm bg-purple-800 text-purple-300 transition flex items-center justify-center gap-2 border border-purple-700';
+            } else {
+                incBtn.className = 'py-3 px-4 rounded-2xl font-bold text-sm bg-emerald-600 text-white shadow transition flex items-center justify-center gap-2 border border-emerald-500';
+                expBtn.className = 'py-3 px-4 rounded-2xl font-bold text-sm bg-purple-800 text-purple-300 transition flex items-center justify-center gap-2 border border-purple-700';
+            }
+        }
+
+        // Form Submit & Dynamic Categories Handler
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const amountVal = parseFloat(document.getElementById('txAmount').value);
+            const descVal = document.getElementById('txDescription').value.trim();
+            const catVal = document.getElementById('txCategory').value.trim();
+
+            if (!amountVal || !descVal || !catVal) return;
+
+            // Dynamic Category Check
+            const capitalizedCat = catVal.charAt(0).toUpperCase() + catVal.slice(1);
+            if (!appState.categories.includes(capitalizedCat)) {
+                appState.categories.push(capitalizedCat);
+            }
+
+            const now = new Date();
+            const fullDateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+
+            const newTx = {
+                id: '_' + Math.random().toString(36).substr(2, 9),
+                amount: amountVal,
+                description: descVal,
+                category: capitalizedCat,
+                type: appState.currentType,
+                date: appState.currentMonth, // Tied to active selected month
+                fullDate: fullDateStr
+            };
+
+            appState.transactions.push(newTx);
+            saveData();
+            closeModal();
+            renderAll();
+        }
+
+        // Delete Transaction
+        function deleteTransaction(id) {
+            appState.transactions = appState.transactions.filter(t => t.id !== id);
+            saveData();
+            renderAll();
+        }
+
+        // Utility: Format Currency
+        function formatCurrency(val) {
+            return Number(val).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        // Utility: Escape HTML for security
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        // Initial Load on Window Load
+        window.onload = function() {
+            renderAll();
+        };
+    </script>
+</body>
+</html>
